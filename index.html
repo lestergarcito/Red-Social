@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiUMGapp ✨</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Iconos FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Archivo de Estilos -->
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+    <!-- Fondo dinámico con resplandor -->
+    <div class="bg-gradient-glow"></div>
+
+    <!-- Navegación Flotante Superior / Inferior Responsive -->
+    <header class="navbar">
+        <div class="logo-container">
+            <div class="logo" onclick="scrollToTop()">
+                <svg class="logo-umg-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="100" cy="100" r="95" fill="#cc1f29" stroke="#c59b27" stroke-width="6"/>
+                    <circle cx="100" cy="100" r="75" fill="#1b4d79" stroke="#ffffff" stroke-width="3"/>
+                    <circle cx="100" cy="100" r="54" fill="#ffffff"/>
+                    <path id="textArcTop" fill="none" d="M 22 100 A 78 78 0 0 1 178 100" />
+                    <text fill="#ffffff" font-size="16.5" font-weight="bold" font-family="Arial, sans-serif">
+                        <textPath href="#textArcTop" startOffset="50%" text-anchor="middle">UNIVERSIDAD MARIANO GALVEZ</textPath>
+                    </text>
+                    <path id="textArcBottom" fill="none" d="M 178 100 A 78 78 0 0 1 22 100" />
+                    <text fill="#ffffff" font-size="18" font-weight="bold" font-family="Arial, sans-serif">
+                        <textPath href="#textArcBottom" startOffset="50%" text-anchor="middle">GUATEMALA</textPath>
+                    </text>
+                    <text x="100" y="60" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold">1966</text>
+                    <path d="M 62 138 C 70 120 80 100 95 90 C 105 85 118 95 110 110 C 105 120 85 130 80 142 C 75 145 65 142 62 138 Z" fill="#ffffff" stroke="#1b4d79" stroke-width="1.5"/>
+                    <circle cx="112" cy="80" r="10" fill="#ffffff" stroke="#1b4d79" stroke-width="1.5"/>
+                    <path d="M 47 142 Q 100 152 153 142 Z" fill="#ffffff"/>
+                    <text x="100" y="146" text-anchor="middle" fill="#1b4d79" font-size="6" font-weight="bold">"CONOCEREIS LA VERDAD</text>
+                    <text x="100" y="152" text-anchor="middle" fill="#1b4d79" font-size="5.5" font-weight="bold">Y LA VERDAD OS HARA LIBRES"</text>
+                </svg>
+                <span class="logo-text">MiUMGapp</span>
+            </div>
+
+            <!-- BOTONES UBICADOS EN LA FRANJA Y VISIBLES EN LA PARTE SUPERIOR MÓVIL -->
+            <div class="subnav-buttons-column">
+                <button class="subnav-btn" onclick="openHashtagsModal()" title="Explorar Hashtags y Tendencias">
+                    <i class="fa-solid fa-hashtag"></i> <span class="subnav-btn-text">Hashtags & Tendencias</span>
+                </button>
+                <button class="subnav-btn highlight-exam-btn" onclick="openExamsModal()" title="Hojas de Trabajo y Exámenes">
+                    <i class="fa-solid fa-pen-to-square"></i> <span class="subnav-btn-text">Exámenes & Repasos</span>
+                </button>
+            </div>
+        </div>
+
+        <nav class="nav-menu">
+            <button class="nav-btn active" onclick="scrollToTop()">
+                <i class="fa-solid fa-house"></i>
+                <span class="nav-label">Inicio</span>
+            </button>
+            <button class="nav-btn" onclick="toggleSearchModal()">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <span class="nav-label">Buscar</span>
+            </button>
+            <button class="nav-btn nav-btn-highlight" onclick="openPublishModal()">
+                <i class="fa-solid fa-plus"></i>
+                <span class="nav-label">Publicar</span>
+            </button>
+            <button class="nav-btn" onclick="openMessagesModal()" style="position: relative;">
+                <i class="fa-regular fa-paper-plane"></i>
+                <span class="nav-label">Mensajes</span>
+                <span id="unread-global-badge" class="badge-unread" style="display:none;"></span>
+            </button>
+            <button class="nav-btn" onclick="openSettingsModal()">
+                <i class="fa-solid fa-sliders"></i>
+                <span class="nav-label">Ajustes</span>
+            </button>
+            <button class="nav-btn nav-btn-admin" id="admin-nav-btn" onclick="openAdminModal()" style="display: none;">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span class="nav-label">Admin</span>
+            </button>
+            <button class="nav-btn nav-profile-btn" id="profile-nav-btn" onclick="openProfileModal()">
+                <div class="user-avatar-mini" id="nav-avatar">?</div>
+                <span class="nav-label" id="profile-label">Perfil</span>
+            </button>
+        </nav>
+
+        <div id="user-controls"></div>
+    </header>
+
+    <!-- Notificación Toast -->
+    <div id="toast" class="toast">
+        <div class="toast-icon-wrapper" id="toast-icon-bg">
+            <i class="fa-solid fa-circle-check" id="toast-icon"></i>
+        </div>
+        <div class="toast-content">
+            <span class="toast-title" id="toast-title">Notificación</span>
+            <span class="toast-msg" id="toast-msg">Mensaje</span>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <main class="main-container">
+        <div id="guest-banner" class="guest-banner" style="display: none;">
+            <div class="guest-banner-icon"><i class="fa-solid fa-eye"></i></div>
+            <div class="guest-banner-text">
+                <strong>Modo Vista Previa:</strong> Estás navegando libremente. <a href="#" onclick="showWelcomeModal()">Inicia sesión</a> para publicar fotos, chatear y comentar.
+            </div>
+        </div>
+
+        <div id="hashtag-filter-bar" class="hashtag-filter-bar" style="display: none;">
+            <span>Viendo publicaciones con: <strong id="active-hashtag-name">#hashtag</strong></span>
+            <button class="btn btn-sm btn-link" onclick="clearHashtagFilter()"><i class="fa-solid fa-xmark"></i> Quitar filtro</button>
+        </div>
+
+        <section id="feed" class="feed-container"></section>
+    </main>
+
+    <!-- MODAL EXÁMENES Y REPASOS -->
+    <div id="exams-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'exams-modal')">
+        <div class="modal-glass modal-large animate-pop">
+            <span class="close-btn" onclick="closeExamsModal()">&times;</span>
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-graduation-cap" style="color: #6366f1;"></i> Exámenes & Repasos UMG</h2>
+                <p>Resuelve pruebas creadas por estudiantes o sube hojas de ejercicios</p>
+            </div>
+
+            <div class="tab-navigation mt-10">
+                <button class="tab-btn active" id="tab-btn-available-exams" onclick="switchExamTab('available')">
+                    <i class="fa-solid fa-list-check"></i> Pruebas Disponibles
+                </button>
+                <button class="tab-btn" id="tab-btn-create-exam" onclick="switchExamTab('create')">
+                    <i class="fa-solid fa-circle-plus"></i> Subir Hoja / Crear Prueba
+                </button>
+            </div>
+
+            <div id="tab-content-available" class="tab-content active mt-15">
+                <div id="exams-list-container" class="exams-list-container"></div>
+            </div>
+
+            <div id="tab-content-create" class="tab-content mt-15" style="display: none;">
+                <form id="create-exam-form" onsubmit="createNewExam(event)">
+                    <div class="input-group">
+                        <i class="fa-solid fa-heading input-icon"></i>
+                        <input type="text" id="exam-title" placeholder="Título del Examen / Repaso" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fa-solid fa-book input-icon"></i>
+                        <input type="text" id="exam-subject" placeholder="Materia o Carrera (ej: Programación I)" required>
+                    </div>
+
+                    <div class="file-select-box mb-10">
+                        <label for="exam-file" class="btn btn-secondary-glass btn-block">
+                            <i class="fa-solid fa-file-arrow-up"></i> Adjuntar Hoja de Ejercicios / PDF / Guía (Opcional)
+                        </label>
+                        <input type="file" id="exam-file" accept="image/*,.pdf" onchange="handleExamFileSelect(event)" style="display: none;">
+                        <span id="exam-file-chosen-name" class="file-name-text">Ningún archivo adjuntado</span>
+                    </div>
+
+                    <h4 class="mt-10 mb-5" style="font-size:0.9em;"><i class="fa-solid fa-question"></i> Preguntas del Examen</h4>
+                    <div class="input-group">
+                        <input type="text" id="exam-q1" placeholder="Pregunta 1" required style="padding-left:14px;">
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="exam-q2" placeholder="Pregunta 2" required style="padding-left:14px;">
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="exam-q3" placeholder="Pregunta 3 (Opcional)" style="padding-left:14px;">
+                    </div>
+
+                    <button type="submit" class="btn btn-gradient btn-block mt-15">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Publicar Examen
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RESOLVER EXAMEN -->
+    <div id="solve-exam-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'solve-exam-modal')">
+        <div class="modal-glass animate-pop">
+            <span class="close-btn" onclick="closeSolveExamModal()">&times;</span>
+            <div id="solve-exam-body"></div>
+        </div>
+    </div>
+
+    <!-- MODAL HASHTAGS Y TENDENCIAS (#) -->
+    <div id="hashtags-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'hashtags-modal')">
+        <div class="modal-glass modal-large animate-pop">
+            <span class="close-btn" onclick="closeHashtagsModal()">&times;</span>
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-hashtag" style="color: #ec4899;"></i> Hashtags y Tendencias UMG</h2>
+                <p>Descubre lo más destacado y haz clic en un hashtag para filtrar sus publicaciones</p>
+            </div>
+
+            <div class="tab-navigation mt-10">
+                <button class="tab-btn active" id="tab-btn-tags" onclick="switchHashtagTab('tags')">
+                    <i class="fa-solid fa-tags"></i> Hashtags Utilizados
+                </button>
+                <button class="tab-btn" id="tab-btn-trends" onclick="switchHashtagTab('trends')">
+                    <i class="fa-solid fa-fire" style="color: #f97316;"></i> Tendencias (+50 Likes)
+                </button>
+            </div>
+
+            <div id="tab-content-tags" class="tab-content active mt-15">
+                <div id="hashtags-cloud" class="hashtags-cloud"></div>
+            </div>
+
+            <div id="tab-content-trends" class="tab-content mt-15" style="display: none;">
+                <div id="trends-feed" class="trends-feed"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL VER PERFIL Y PUBLICACIONES DE UN USUARIO -->
+    <div id="user-public-profile-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'user-public-profile-modal')">
+        <div class="modal-glass modal-large animate-pop">
+            <span class="close-btn" onclick="closeUserPublicProfileModal()">&times;</span>
+            <div id="user-public-profile-content"></div>
+        </div>
+    </div>
+
+    <!-- MODAL COMPARTIR PUBLICACIÓN -->
+    <div id="share-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'share-modal')">
+        <div class="modal-glass animate-pop">
+            <span class="close-btn" onclick="closeShareModal()">&times;</span>
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-share-nodes" style="color: #6366f1;"></i> Compartir Publicación</h2>
+                <p>Envía esta foto directamente a un chat o grupo</p>
+            </div>
+            <div id="share-chat-list" class="share-chat-list"></div>
+        </div>
+    </div>
+
+    <!-- MODAL LIGHTBOX FOTOS -->
+    <div id="lightbox-modal" class="lightbox-overlay" onclick="closeLightboxModal()">
+        <span class="lightbox-close">&times;</span>
+        <img id="lightbox-img" src="" alt="Publicación completa">
+    </div>
+
+    <!-- MODAL AJUSTES CON MENSAJE DE AUTOR Y COPYRIGHT -->
+    <div id="settings-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'settings-modal')">
+        <div class="modal-glass modal-large animate-pop">
+            <span class="close-btn" onclick="closeSettingsModal()">&times;</span>
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-sliders" style="color: #6366f1;"></i> Ajustes de la Cuenta</h2>
+                <p>Personaliza tu experiencia, perfil y preferencia de contenido</p>
+            </div>
+
+            <div class="settings-sections">
+                <div class="settings-group">
+                    <h4><i class="fa-solid fa-palette"></i> Apariencia</h4>
+                    <div class="setting-row">
+                        <span>Modo Oscuro (Fondo Negro)</span>
+                        <label class="switch">
+                            <input type="checkbox" id="setting-dark-mode" onchange="toggleDarkMode(this.checked)">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <h4><i class="fa-solid fa-graduation-cap"></i> Preferencia de Contenido por Carreras</h4>
+                    <p style="font-size:0.78em; color:var(--text-secondary); margin-bottom:10px;">
+                        Selecciona tus carreras de interés para priorizar sus publicaciones en tu inicio:
+                    </p>
+                    <div class="careers-checkbox-grid" id="careers-checkbox-container">
+                        <label class="career-checkbox-label"><input type="checkbox" class="career-check" value="Ingeniería en Sistemas"> Ingeniería en Sistemas</label>
+                        <label class="career-checkbox-label"><input type="checkbox" class="career-check" value="Derecho"> Licenciatura en Ciencias Jurídicas (Derecho)</label>
+                        <label class="career-checkbox-label"><input type="checkbox" class="career-check" value="Medicina"> Medicina Humana y Cirugía</label>
+                        <label class="career-checkbox-label"><input type="checkbox" class="career-check" value="Administración de Empresas"> Administración de Empresas</label>
+                        <label class="career-checkbox-label"><input type="checkbox" class="career-check" value="Arquitectura"> Arquitectura y Diseño</label>
+                        <label class="career-checkbox-label"><input type="checkbox" class="career-check" value="Psicología"> Psicología Clínica</label>
+                        <label class="career-checkbox-label"><input type="checkbox" class="career-check" value="Ciencias de la Comunicación"> Ciencias de la Comunicación</label>
+                    </div>
+                    <button type="button" onclick="saveCareerPreferences()" class="btn btn-sm btn-secondary-glass mt-10">
+                        Guardar Preferencias de Carreras
+                    </button>
+                </div>
+
+                <div class="settings-group">
+                    <h4><i class="fa-solid fa-lock"></i> Privacidad y Notificaciones</h4>
+                    <div class="setting-row">
+                        <span>Notificar nuevas publicaciones</span>
+                        <label class="switch">
+                            <input type="checkbox" id="setting-notifications" onchange="toggleNotificationSetting(this.checked)">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <span>Hacer Cuenta Privada</span>
+                            <p style="font-size:0.75em; color:var(--text-secondary);">Nadie podrá enviarte mensajes directos.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="setting-private-account" onchange="togglePrivateAccountSetting(this.checked)">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <h4><i class="fa-solid fa-user-gear"></i> Cambiar Usuario y Contraseña</h4>
+                    <form onsubmit="updateUserAccount(event)">
+                        <div class="input-group">
+                            <i class="fa-solid fa-at input-icon"></i>
+                            <input type="text" id="setting-username" placeholder="Nuevo Nombre de Usuario" required>
+                        </div>
+                        <div class="input-group">
+                            <i class="fa-solid fa-key input-icon"></i>
+                            <input type="password" id="setting-password" placeholder="Nueva Contraseña" required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary-glass btn-block">Guardar Cambios</button>
+                    </form>
+                </div>
+
+                <!-- SECCIÓN DE AUTOR Y COPYRIGHT -->
+                <div class="settings-footer-info">
+                    <p>© 2026 Creado por Lester Garcia</p>
+                    <p><i class="fa-solid fa-globe"></i> Idioma: Español (ES)</p>
+                    <p class="small-subtext">Todos los derechos reservados. MiUMGapp</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PERFIL PROPIO CON CAMPANA DE NOTIFICACIONES -->
+    <div id="profile-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'profile-modal')">
+        <div class="modal-glass animate-pop">
+            <div class="profile-modal-bell-container" onclick="toggleNotificationsDropdown(event)">
+                <i class="fa-solid fa-bell"></i>
+                <span id="like-notifications-badge" class="badge-bell-count" style="display: none;">0</span>
+            </div>
+            
+            <span class="close-btn" onclick="closeProfileModal()">&times;</span>
+
+            <div id="notifications-dropdown" class="notifications-dropdown" style="display: none;">
+                <div class="dropdown-header">
+                    <h4><i class="fa-solid fa-bell" style="color:#ec4899;"></i> Notificaciones</h4>
+                    <button class="btn btn-sm btn-link" onclick="clearNotifications()">Limpiar Todo</button>
+                </div>
+                <div id="notifications-list-body" class="notifications-list-body"></div>
+            </div>
+
+            <div id="profile-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- MODAL MENSAJES -->
+    <div id="messages-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'messages-modal')">
+        <div class="modal-glass modal-chat-box animate-pop">
+            <span class="close-btn" onclick="closeMessagesModal()">&times;</span>
+            
+            <div class="chat-layout">
+                <div class="chat-sidebar" id="chat-sidebar-view">
+                    <div class="chat-sidebar-header">
+                        <h3><i class="fa-solid fa-comments"></i> Mensajes</h3>
+                        <button class="btn btn-sm btn-secondary-glass" onclick="showCreateGroupView()">
+                            <i class="fa-solid fa-users"></i> Crear Grupo
+                        </button>
+                    </div>
+                    <ul id="chats-list" class="chats-list"></ul>
+                </div>
+
+                <div class="chat-sidebar" id="create-group-view" style="display: none;">
+                    <div class="chat-sidebar-header">
+                        <button class="btn-icon" onclick="hideCreateGroupView()"><i class="fa-solid fa-arrow-left"></i></button>
+                        <h3>Nuevo Grupo</h3>
+                    </div>
+                    <div class="input-group mt-10">
+                        <input type="text" id="group-name-input" placeholder="Nombre del grupo..." required>
+                    </div>
+                    <p class="small-text mb-5">Selecciona integrantes:</p>
+                    <div id="group-users-select" class="group-select-list"></div>
+                    <button class="btn btn-gradient btn-block mt-10" onclick="createNewGroup()">
+                        Confirmar y Crear
+                    </button>
+                </div>
+
+                <div class="chat-main" id="chat-main-view">
+                    <div id="chat-placeholder" class="chat-placeholder">
+                        <i class="fa-regular fa-paper-plane" style="font-size:2.5em; color:#cbd5e1;"></i>
+                        <p>Selecciona una conversación para chatear</p>
+                    </div>
+
+                    <div id="active-chat-container" style="display: none; height: 100%; flex-direction: column;">
+                        <div class="active-chat-header">
+                            <button class="btn-icon mobile-back-chat-btn" onclick="backToChatListMobile()"><i class="fa-solid fa-arrow-left"></i></button>
+                            <span id="active-chat-title">Usuario</span>
+                        </div>
+                        <div id="chat-messages-body" class="chat-messages-body"></div>
+                        <form id="chat-form" onsubmit="sendMessage(event)" class="chat-input-area">
+                            <input type="text" id="chat-message-input" placeholder="Escribe un mensaje..." required autocomplete="off">
+                            <button type="submit" class="btn btn-gradient" style="padding: 10px 14px;">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PANEL ADMIN -->
+    <div id="admin-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'admin-modal')">
+        <div class="modal-glass modal-large animate-pop">
+            <span class="close-btn" onclick="closeAdminModal()">&times;</span>
+            <div class="admin-header">
+                <div class="admin-badge"><i class="fa-solid fa-shield-halved"></i> Panel Admin - MiUMGapp</div>
+                <p>Estadísticas e historial de la plataforma</p>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon bg-purple"><i class="fa-solid fa-chart-line"></i></div>
+                    <div class="metric-data">
+                        <span class="metric-value" id="stat-visits">0</span>
+                        <span class="metric-label">Visitas Totales</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon bg-blue"><i class="fa-solid fa-users"></i></div>
+                    <div class="metric-data">
+                        <span class="metric-value" id="stat-users">0</span>
+                        <span class="metric-label">Usuarios</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon bg-green"><i class="fa-solid fa-images"></i></div>
+                    <div class="metric-data">
+                        <span class="metric-value" id="stat-posts">0</span>
+                        <span class="metric-label">Publicaciones</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon bg-pink"><i class="fa-solid fa-heart"></i></div>
+                    <div class="metric-data">
+                        <span class="metric-value" id="stat-likes">0</span>
+                        <span class="metric-label">Likes Totales</span>
+                    </div>
+                </div>
+            </div>
+
+            <h4 class="section-subtitle mt-15"><i class="fa-solid fa-database"></i> Mensajes Registrados en IndexedDB</h4>
+            <div class="admin-chats-audit" id="admin-chats-audit"></div>
+
+            <h4 class="section-subtitle mt-15"><i class="fa-solid fa-user-group"></i> Usuarios Registrados</h4>
+            <div class="users-table-wrapper">
+                <ul id="users-list" class="users-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CREAR PUBLICACIÓN -->
+    <div id="publish-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'publish-modal')">
+        <div class="modal-glass animate-pop">
+            <span class="close-btn" onclick="closePublishModal()">&times;</span>
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-wand-magic-sparkles" style="color: #833ab4;"></i> Crear Publicación</h2>
+                <p>Elige una foto desde tu equipo o mediante URL</p>
+            </div>
+
+            <form id="publish-modal-form" onsubmit="createPost(event)">
+                <div class="file-select-box">
+                    <label for="post-file" class="btn btn-secondary-glass btn-block">
+                        <i class="fa-solid fa-folder-open"></i> Escoger foto del dispositivo
+                    </label>
+                    <input type="file" id="post-file" accept="image/*" onchange="previewSelectedFile(event)" style="display: none;">
+                    <span id="file-chosen-name" class="file-name-text">Ningún archivo seleccionado</span>
+                </div>
+
+                <div class="divider-text">o escribe una URL</div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-link input-icon"></i>
+                    <input type="text" id="post-url" placeholder="URL de la foto (ej: https://picsum.photos/600/400)">
+                </div>
+
+                <div id="image-preview-container" class="image-preview-container" style="display: none;">
+                    <img id="image-preview" src="" alt="Vista previa">
+                </div>
+
+                <div class="input-group mt-10">
+                    <i class="fa-solid fa-graduation-cap input-icon"></i>
+                    <select id="post-career-category" style="width:100%; padding:12px 14px 12px 40px; border-radius:10px; border:1px solid var(--card-border); background:var(--input-bg); color:var(--text-primary);">
+                        <option value="General">Carrera / Área (General)</option>
+                        <option value="Ingeniería en Sistemas">Ingeniería en Sistemas</option>
+                        <option value="Derecho">Licenciatura en Ciencias Jurídicas (Derecho)</option>
+                        <option value="Medicina">Medicina Humana y Cirugía</option>
+                        <option value="Administración de Empresas">Administración de Empresas</option>
+                        <option value="Arquitectura">Arquitectura y Diseño</option>
+                        <option value="Psicología">Psicología Clínica</option>
+                        <option value="Ciencias de la Comunicación">Ciencias de la Comunicación</option>
+                    </select>
+                </div>
+
+                <div class="input-group mt-10">
+                    <textarea id="post-caption" placeholder="Escribe una descripción genial y usa #hashtags (ej: #UMG #Ingenieria)..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-gradient btn-block mt-10">
+                    <i class="fa-solid fa-paper-plane"></i> Publicar Ahora
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL BÚSQUEDA -->
+    <div id="search-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'search-modal')">
+        <div class="modal-glass animate-pop">
+            <span class="close-btn" onclick="closeSearchModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Buscar Usuario</h2>
+                <p>Encuentra personas registradas en MiUMGapp</p>
+            </div>
+            <div class="input-group">
+                <i class="fa-solid fa-magnifying-glass input-icon"></i>
+                <input type="text" id="search-input" placeholder="Escribe un usuario (ej: admin, carlos_v, Lestergar, pablom)" onkeyup="searchUser()">
+            </div>
+            <div id="search-result" class="search-result-container"></div>
+        </div>
+    </div>
+
+    <!-- MODAL BIENVENIDA (BLOQUEADO: NO SE CIERRA AL DAR CLIC AFUERA) -->
+    <div id="welcome-modal" class="modal-overlay">
+        <div class="modal-glass text-center animate-pop">
+            <div class="welcome-icon"><i class="fa-solid fa-sparkles"></i></div>
+            <h2>¡Bienvenido a MiUMGapp!</h2>
+            <p class="modal-desc">Únete a la comunidad para compartir tus momentos o explora el contenido libremente.</p>
+            <div class="welcome-actions">
+                <button class="btn btn-gradient btn-lg" onclick="showLoginModal()">
+                    <i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión
+                </button>
+                <button class="btn btn-secondary-glass btn-lg" onclick="showRegisterModal()">
+                    <i class="fa-solid fa-user-plus"></i> Crear Cuenta
+                </button>
+                <button class="btn btn-link" onclick="proceedAsGuest()">
+                    <i class="fa-solid fa-arrow-right-long"></i> Hacerlo más tarde
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL INICIAR SESIÓN (BLOQUEADO: NO SE CIERRA AL DAR CLIC AFUERA) -->
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-glass animate-pop">
+            <span class="close-btn" onclick="showWelcomeModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Iniciar Sesión</h2>
+                <p>Ingresa con tu usuario registrado</p>
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <i class="fa-solid fa-user input-icon"></i>
+                    <input type="text" id="login-username" placeholder="Usuario" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-lock input-icon"></i>
+                    <input type="password" id="login-password" placeholder="Contraseña" required>
+                </div>
+                <button type="submit" class="btn btn-gradient btn-block mt-15">Ingresar</button>
+            </form>
+            <p class="footer-link mt-15">¿Aún no tienes cuenta? <a href="#" onclick="showRegisterModal()">Crear cuenta</a></p>
+        </div>
+    </div>
+
+    <!-- MODAL CREAR CUENTA (BLOQUEADO: NO SE CIERRA AL DAR CLIC AFUERA) -->
+    <div id="register-modal" class="modal-overlay">
+        <div class="modal-glass animate-pop">
+            <span class="close-btn" onclick="showWelcomeModal()">&times;</span>
+            <div class="modal-header">
+                <h2>Crear Cuenta</h2>
+                <p>Completa tus datos para empezar a publicar</p>
+            </div>
+            <form id="register-form">
+                <div class="input-group">
+                    <i class="fa-solid fa-id-card input-icon"></i>
+                    <input type="text" id="reg-fullname" placeholder="Nombre completo" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-at input-icon"></i>
+                    <input type="text" id="reg-username" placeholder="Nombre de usuario" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-key input-icon"></i>
+                    <input type="password" id="reg-password" placeholder="Contraseña" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-cake-candles input-icon"></i>
+                    <input type="number" id="reg-age" placeholder="Edad" min="1" max="120" required>
+                </div>
+                <button type="submit" class="btn btn-secondary-glass btn-block mt-15">Registrarme</button>
+            </form>
+            <p class="footer-link mt-15">¿Ya tienes una cuenta? <a href="#" onclick="showLoginModal()">Iniciar Sesión</a></p>
+        </div>
+    </div>
+
+    <script src="programa.js"></script>
+</body>
+</html>
