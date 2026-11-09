@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MiUMGapp ✨</title>
+    <title>MiUMGapp | Comunidad Universitaria</title>
+    <meta name="description" content="MiUMGapp: conecta, aprende y comparte con la comunidad universitaria UMG.">
+    <meta name="theme-color" content="#101a35">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <!-- Iconos FontAwesome -->
@@ -113,6 +115,16 @@
             <button class="btn btn-sm btn-link" onclick="clearHashtagFilter()"><i class="fa-solid fa-xmark"></i> Quitar filtro</button>
         </div>
 
+        <section class="campus-hub" aria-labelledby="campus-hub-title">
+            <div class="campus-hub-heading"><div><span class="eyebrow">UNIVERSIDAD • COMUNIDAD • CONEXIÓN</span><h1 id="campus-hub-title">Tu campus, <span>en un solo lugar.</span></h1><p>Conecta con estudiantes, encuentra recursos y aprovecha cada oportunidad.</p></div><div class="hub-orbit" aria-hidden="true"><i class="fa-solid fa-graduation-cap"></i></div></div>
+            <div class="campus-tools">
+                <button class="campus-tool" onclick="openCampusFeature('saved')"><span class="tool-icon"><i class="fa-solid fa-bookmark"></i></span><span><strong>Mis guardados</strong><small>Publicaciones favoritas</small></span></button>
+                <button class="campus-tool" onclick="openCampusFeature('events')"><span class="tool-icon"><i class="fa-solid fa-calendar-days"></i></span><span><strong>Agenda U</strong><small>Eventos y actividades</small></span></button>
+                <button class="campus-tool" onclick="openCampusFeature('market')"><span class="tool-icon"><i class="fa-solid fa-repeat"></i></span><span><strong>Intercambio</strong><small>Compra, vende o cambia</small></span></button>
+                <button class="campus-tool" onclick="openCampusFeature('study')"><span class="tool-icon"><i class="fa-solid fa-people-group"></i></span><span><strong>Círculos de estudio</strong><small>Encuentra compañeros</small></span></button>
+                <button class="campus-tool" onclick="openCampusFeature('focus')"><span class="tool-icon"><i class="fa-solid fa-stopwatch"></i></span><span><strong>Modo enfoque</strong><small>Estudia sin distracciones</small></span></button>
+            </div>
+        </section>
         <section id="feed" class="feed-container"></section>
     </main>
 
@@ -595,6 +607,7 @@
         </div>
     </div>
 
+    <div id="campus-feature-modal" class="modal-overlay" onclick="closeModalOnBackdrop(event, 'campus-feature-modal')"><div class="modal-glass modal-large animate-pop campus-feature-modal"><span class="close-btn" onclick="closeCampusFeature()">&times;</span><div id="campus-feature-content"></div><div id="campus-entry-form"></div></div></div>
     <script src="programa.js"></script>
 </body>
 </html>

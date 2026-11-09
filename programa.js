@@ -36,7 +36,7 @@ if (!localStorage.getItem('examsDB')) {
 
 // Inicialización de IndexedDB (Versión 2 con almacén para Publicaciones y Repasos)
 let db;
-const dbRequest = indexedDB.open("MiUMGapp_DB", 2);
+const dbRequest = indexedDB.open("MiUMGapp_DB", 3);
 
 dbRequest.onupgradeneeded = function(e) {
     db = e.target.result;
@@ -52,11 +52,34 @@ dbRequest.onupgradeneeded = function(e) {
         const examsStore = db.createObjectStore('examsStore', { keyPath: 'id' });
         examsStore.createIndex('author', 'author', { unique: false });
     }
+    if (!db.objectStoreNames.contains('eventsStore')) {
+        const store = db.createObjectStore('eventsStore', { keyPath: 'id' });
+        store.createIndex('author', 'author', { unique: false });
+    }
+    if (!db.objectStoreNames.contains('marketStore')) {
+        const store = db.createObjectStore('marketStore', { keyPath: 'id' });
+        store.createIndex('author', 'author', { unique: false });
+    }
+    if (!db.objectStoreNames.contains('studyGroupsStore')) {
+        const store = db.createObjectStore('studyGroupsStore', { keyPath: 'id' });
+        store.createIndex('author', 'author', { unique: false });
+    }
+    if (!db.objectStoreNames.contains('notificationsStore')) {
+        const store = db.createObjectStore('notificationsStore', { keyPath: 'id' });
+        store.createIndex('targetUser', 'targetUser', { unique: false });
+    }
+    if (!db.objectStoreNames.contains('savedPostsStore')) {
+        db.createObjectStore('savedPostsStore', { keyPath: 'username' });
+    }
 };
 
 dbRequest.onsuccess = function(e) {
     db = e.target.result;
+    db.onversionchange = function() { db.close(); };
     syncIndexedDBData();
+};
+dbRequest.onerror = function(e) {
+    console.error('No se pudo abrir IndexedDB:', e.target.error);
 };
 
 // Datos Base iniciales
@@ -358,6 +381,7 @@ function submitExamAnswers(e) {
     });
 
     localStorage.setItem('userNotifications', JSON.stringify(userNotifications));
+    persistCampusCollection('userNotifications', userNotifications);
 
     closeSolveExamModal();
     showToast('Prueba Enviada', `Tus respuestas para "${currentExamToSolve.title}" fueron registradas.`);
@@ -366,6 +390,7 @@ function submitExamAnswers(e) {
 function deleteNotification(notifId) {
     userNotifications = userNotifications.filter(n => n.id !== notifId);
     localStorage.setItem('userNotifications', JSON.stringify(userNotifications));
+    persistCampusCollection('userNotifications', userNotifications);
     renderUserNotifications();
     showToast('Eliminado', 'Se borró la notificación.');
 }
@@ -839,24 +864,91 @@ function saveExamToIndexedDB(examObj) {
 
 function syncIndexedDBData() {
     if (!db) return;
-    const chatsDB = JSON.parse(localStorage.getItem('chatsDB')) || [];
-    const posts = JSON.parse(localStorage.getItem('posts')) || [];
-    const exams = JSON.parse(localStorage.getItem('examsDB')) || [];
+    const tx = db.transaction(
+        ['messagesStore', 'postsStore', 'examsStore', 'eventsStore',
+         'marketStore', 'studyGroupsStore', 'notificationsStore', 'savedPostsStore'],
+        'readwrite'
+    );
 
-    const tx = db.transaction(['messagesStore', 'postsStore', 'examsStore'], 'readwrite');
-    
-    const msgStore = tx.objectStore('messagesStore');
-    chatsDB.forEach(chat => {
-        chat.messages.forEach(msg => {
-            msgStore.add({ chatId: chat.id, sender: msg.sender, text: msg.text, timestamp: msg.timestamp });
-        });
+    // Reconstruye mensajes desde el respaldo local para evitar duplicados.
+    const messagesStore = tx.objectStore('messagesStore');
+    messagesStore.clear();
+    const chats = JSON.parse(localStorage.getItem('chatsDB') || '[]');
+    chats.forEach(chat => (chat.messages || []).forEach(msg => {
+        messagesStore.add({ chatId: chat.id, sender: msg.sender, text: msg.text, timestamp: msg.timestamp });
+    }));
+
+    const collections = [
+        ['postsStore', 'posts'],
+        ['examsStore', 'examsDB'],
+        ['eventsStore', 'campusEvents'],
+        ['marketStore', 'campusMarket'],
+        ['studyGroupsStore', 'campusStudyGroups'],
+        ['notificationsStore', 'userNotifications']
+    ];
+    collections.forEach(([storeName, localKey]) => {
+        let items = [];
+        try { items = JSON.parse(localStorage.getItem(localKey) || '[]') || []; } catch (_) {}
+        const store = tx.objectStore(storeName);
+        items.forEach(item => store.put(item));
     });
 
-    const postsStore = tx.objectStore('postsStore');
-    posts.forEach(p => postsStore.put(p));
+    const savedByUser = JSON.parse(localStorage.getItem('campusSavedPosts') || '{}');
+    Object.entries(savedByUser).forEach(([username, postIds]) => {
+        tx.objectStore('savedPostsStore').put({ username, postIds: Array.isArray(postIds) ? postIds : [] });
+    });
 
-    const examsStore = tx.objectStore('examsStore');
-    exams.forEach(e => examsStore.put(e));
+    tx.oncomplete = refreshCampusCachesFromIndexedDB;
+    tx.onerror = () => console.error('Error sincronizando IndexedDB:', tx.error);
+}
+
+function refreshCampusCachesFromIndexedDB() {
+    if (!db) return;
+    [
+        ['eventsStore', 'campusEvents'],
+        ['marketStore', 'campusMarket'],
+        ['studyGroupsStore', 'campusStudyGroups'],
+        ['notificationsStore', 'userNotifications']
+    ].forEach(([storeName, localKey]) => {
+        const req = db.transaction(storeName, 'readonly').objectStore(storeName).getAll();
+        req.onsuccess = () => {
+            localStorage.setItem(localKey, JSON.stringify(req.result || []));
+            if (localKey === 'userNotifications') {
+                userNotifications = req.result || [];
+                if (currentUser && document.getElementById('notifications-list-body')) renderUserNotifications();
+            }
+        };
+    });
+    const savedReq = db.transaction('savedPostsStore', 'readonly').objectStore('savedPostsStore').getAll();
+    savedReq.onsuccess = () => {
+        const saved = {};
+        (savedReq.result || []).forEach(item => { saved[item.username] = item.postIds || []; });
+        localStorage.setItem('campusSavedPosts', JSON.stringify(saved));
+    };
+}
+
+function persistCampusCollection(key, records) {
+    if (!db) return;
+    const stores = {
+        campusEvents: 'eventsStore',
+        campusMarket: 'marketStore',
+        campusStudyGroups: 'studyGroupsStore',
+        userNotifications: 'notificationsStore'
+    };
+    const storeName = stores[key];
+    if (!storeName) return;
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    store.clear();
+    records.forEach(record => store.put(record));
+    tx.onerror = () => console.error(`Error guardando ${key}:`, tx.error);
+}
+
+function persistSavedPosts(username, postIds) {
+    if (!db || !username) return;
+    const tx = db.transaction('savedPostsStore', 'readwrite');
+    tx.objectStore('savedPostsStore').put({ username, postIds });
+    tx.onerror = () => console.error('Error guardando publicaciones favoritas:', tx.error);
 }
 
 // CAMPANA DE NOTIFICACIONES (LIKES, EXÁMENES Y COMENTARIOS)
@@ -906,6 +998,14 @@ function renderUserNotifications() {
                     <button class="notif-delete-btn" onclick="deleteNotification(${n.id})"><i class="fa-solid fa-trash-can"></i> Borrar Respuesta</button>
                 </div>
             `;
+        } else if (n.type === 'study_response') {
+            return `
+                <div class="notif-item">
+                    <span><i class="fa-solid fa-people-group" style="color:#6366f1;"></i> <strong>@${escapeCampusText(n.fromUser)}</strong> ${n.response === 'accepted' ? 'aceptó' : 'rechazó'} tu invitación para el círculo <b>${escapeCampusText(n.circleTitle)}</b>.</span>
+                    <div style="font-size:.75em;margin-top:6px;line-height:1.5;"><b>Estudiante:</b> ${escapeCampusText(n.studentName)} (@${escapeCampusText(n.fromUser)})<br><b>Materia:</b> ${escapeCampusText(n.subject)}<br><b>Horario:</b> ${escapeCampusText(n.schedule)}<br><b>Modalidad:</b> ${escapeCampusText(n.meetingPoint)}</div>
+                    <button class="notif-delete-btn" onclick="deleteNotification(${n.id})"><i class="fa-solid fa-trash-can"></i> Borrar</button>
+                </div>
+            `;
         } else if (n.type === 'comment') {
             return `
                 <div class="notif-item">
@@ -928,6 +1028,7 @@ function clearNotifications() {
     if (!currentUser) return;
     userNotifications = userNotifications.filter(n => n.targetUser !== currentUser.username);
     localStorage.setItem('userNotifications', JSON.stringify(userNotifications));
+    persistCampusCollection('userNotifications', userNotifications);
     renderUserNotifications();
 }
 
@@ -1575,9 +1676,8 @@ function renderFeed() {
                 <button class="like-btn" onclick="likePost(${post.id})">
                     <i class="fa-solid fa-heart"></i> ${post.likes} Likes
                 </button>
-                <button class="share-btn" onclick="openShareModal(${post.id})">
-                    <i class="fa-solid fa-share-nodes"></i> Compartir
-                </button>
+                <button class="share-btn" onclick="openShareModal(${post.id})"><i class="fa-solid fa-share-nodes"></i> Compartir</button>
+                <button class="save-post-btn ${isPostSaved(post.id) ? 'is-saved' : ''}" onclick="toggleSavedPost(${post.id})" aria-label="Guardar publicación"><i class="fa-${isPostSaved(post.id) ? 'solid' : 'regular'} fa-bookmark"></i> ${isPostSaved(post.id) ? 'Guardado' : 'Guardar'}</button>
             </div>
             <div class="comments-container">
                 ${commentsHTML}
@@ -1662,6 +1762,7 @@ function likePost(postId) {
                 timestamp: Date.now()
             });
             localStorage.setItem('userNotifications', JSON.stringify(userNotifications));
+    persistCampusCollection('userNotifications', userNotifications);
         }
 
         renderFeed();
@@ -1695,6 +1796,7 @@ function addComment(e, postId) {
                 timestamp: Date.now()
             });
             localStorage.setItem('userNotifications', JSON.stringify(userNotifications));
+    persistCampusCollection('userNotifications', userNotifications);
         }
 
         renderFeed();
@@ -1735,3 +1837,32 @@ function handleProfileClick() {
 function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+/* MiUMGapp 2.0: herramientas comunitarias mejoradas */
+let focusInterval=null, focusSeconds=25*60;
+function readCampusData(key){try{return JSON.parse(localStorage.getItem(key))||[]}catch(e){return[]}}
+function writeCampusData(key,value){
+    localStorage.setItem(key,JSON.stringify(value));
+    persistCampusCollection(key,value);
+}
+function escapeCampusText(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function getSavedPostIds(){if(!currentUser)return[];const all=JSON.parse(localStorage.getItem('campusSavedPosts')||'{}');return Array.isArray(all[currentUser.username])?all[currentUser.username]:[]}
+function isPostSaved(id){return getSavedPostIds().includes(id)}
+function toggleSavedPost(id){if(!currentUser){showWelcomeModal();return}const all=JSON.parse(localStorage.getItem('campusSavedPosts')||'{}');const ids=Array.isArray(all[currentUser.username])?all[currentUser.username]:[];const index=ids.indexOf(id);if(index>=0){ids.splice(index,1);showToast('Eliminado de guardados','La publicación salió de tu colección.')}else{ids.unshift(id);showToast('Publicación guardada','La encontrarás en Mis guardados.')}all[currentUser.username]=ids;localStorage.setItem('campusSavedPosts',JSON.stringify(all));persistSavedPosts(currentUser.username,ids);renderFeed()}
+function openCampusFeature(feature){const content=document.getElementById('campus-feature-content');if(!content)return;const cfg={saved:['MIS GUARDADOS','Tu colección universitaria','Guarda publicaciones que quieras consultar después.'],events:['AGENDA U','Eventos y actividades','Publica actividades y reacciona con emojis.'],market:['INTERCAMBIO U','Mercado entre estudiantes','Coordina el punto y la hora para entregar o intercambiar artículos.'],study:['CÍRCULOS DE ESTUDIO','Aprender en equipo','Envía tu respuesta a la invitación; el creador recibirá los datos del estudiante.'],focus:['MODO ENFOQUE','Una sesión a la vez','Organiza 25 minutos de concentración y toma un descanso.']};if(!cfg[feature])return;let body=feature==='saved'?renderSavedPosts():feature==='events'?renderCampusEntries('campusEvents','event'):feature==='market'?renderCampusEntries('campusMarket','market'):feature==='study'?renderCampusEntries('campusStudyGroups','study'):renderFocusTimer();content.innerHTML=`<div class="feature-head"><span class="feature-kicker">${cfg[feature][0]}</span><h2>${cfg[feature][1]}</h2><p>${cfg[feature][2]}</p></div>${body}`;openModalById('campus-feature-modal');if(feature==='focus')updateFocusClock()}
+function closeCampusFeature(){document.getElementById('campus-feature-modal')?.classList.remove('active');document.body.classList.remove('modal-open')}
+function renderSavedPosts(){if(!currentUser)return'<div class="feature-empty">Inicia sesión para crear tu colección.</div><div class="feature-actions"><button class="btn btn-gradient" onclick="showWelcomeModal()">Iniciar sesión</button></div>';const ids=getSavedPostIds();const posts=(JSON.parse(localStorage.getItem('posts'))||[]).filter(p=>ids.includes(p.id));if(!posts.length)return'<div class="feature-empty"><i class="fa-regular fa-bookmark"></i><br><br>Aún no guardas publicaciones.<br>Usa el botón Guardar en cualquier publicación.</div>';return`<div class="feature-list">${posts.map(p=>`<article class="feature-entry"><strong>@${escapeCampusText(p.author)}</strong><p>${escapeCampusText(p.caption)}</p><div class="entry-meta">${escapeCampusText(p.career||'Comunidad UMG')} · ${p.likes||0} likes</div><div class="feature-actions"><button class="btn btn-sm btn-secondary-glass" onclick="toggleSavedPost(${Number(p.id)});openCampusFeature('saved')">Quitar de guardados</button></div></article>`).join('')}</div>`}
+function renderCampusEntries(key,type){const entries=readCampusData(key).slice().reverse();let list='';if(entries.length){list=`<div class="feature-list">${entries.map(x=>{if(type==='event')return renderEventEntry(x);if(type==='market')return renderMarketEntry(x);return renderStudyEntry(x)}).join('')}</div>`}else{list='<div class="feature-empty">Todavía no hay publicaciones aquí. ¡Inaugura este espacio!</div>'}const label=type==='event'?'Publicar evento':type==='market'?'Publicar intercambio':'Crear círculo';return`${list}<div class="feature-actions"><button class="btn btn-gradient" onclick="showCampusEntryForm('${type}')"><i class="fa-solid fa-plus"></i> ${label}</button></div>`}
+function renderEventEntry(x){const reactions=x.reactions||{};const emojis=['👍','❤️','🎉','😍','🙌'];return`<article class="feature-entry"><strong>${escapeCampusText(x.title)}</strong><p>${escapeCampusText(x.description)}</p><div class="entry-meta"><i class="fa-regular fa-calendar"></i> ${escapeCampusText(x.detail)} · ${escapeCampusText(x.contact)} · @${escapeCampusText(x.author)}</div><div class="emoji-reactions" aria-label="Reacciones">${emojis.map(emoji=>`<button class="emoji-reaction ${reactions[emoji]?.includes(currentUser?.username)?'selected':''}" onclick="reactToCampusEvent(${Number(x.id)},'${emoji}')" aria-label="Reaccionar ${emoji}">${emoji}<span>${(reactions[emoji]||[]).length}</span></button>`).join('')}</div></article>`}
+function renderMarketEntry(x){return`<article class="feature-entry"><strong>${escapeCampusText(x.title)}</strong><p>${escapeCampusText(x.description)}</p><div class="market-details"><span><i class="fa-solid fa-location-dot"></i> ${escapeCampusText(x.meetingPoint||'Por coordinar')}</span><span><i class="fa-regular fa-clock"></i> ${escapeCampusText(x.meetingTime||'Por coordinar')}</span><span><i class="fa-solid fa-user"></i> ${escapeCampusText(x.studentName||x.author)}</span></div><div class="entry-meta">Publicado por @${escapeCampusText(x.author)}</div></article>`}
+function renderStudyEntry(x){const responses=x.responses||{};const already= currentUser && responses[currentUser.username];const own=currentUser&&x.author===currentUser.username;return`<article class="feature-entry"><strong>${escapeCampusText(x.title)}</strong><p>${escapeCampusText(x.description)}</p><div class="entry-meta">Materia: ${escapeCampusText(x.subject||x.title)} · Horario: ${escapeCampusText(x.schedule||x.detail)} · Lugar: ${escapeCampusText(x.meetingPoint||x.contact)} · @${escapeCampusText(x.author)}</div>${own?'<p class="study-status">Este es tu círculo. Las respuestas de los estudiantes llegarán a tus notificaciones.</p>':!currentUser?'<button class="btn btn-sm btn-gradient" onclick="showWelcomeModal()">Inicia sesión para responder</button>':already?`<p class="study-status">Ya respondiste: ${already==='accepted'?'aceptaste':'rechazaste'} esta invitación.</p>`:`<div class="study-invite-actions"><button class="btn btn-sm btn-gradient" onclick="respondToStudyInvite(${Number(x.id)},'accepted')"><i class="fa-solid fa-check"></i> Aceptar invitación</button><button class="btn btn-sm btn-secondary-glass" onclick="respondToStudyInvite(${Number(x.id)},'rejected')"><i class="fa-solid fa-xmark"></i> Rechazar invitación</button></div>`}</article>`}
+function showCampusEntryForm(type){if(!currentUser){showWelcomeModal();return}const target=document.getElementById('campus-entry-form');if(!target)return;const forms={event:`<form id="campus-entry-data-form" onsubmit="submitCampusEntry(event,'event')"><label>Nombre del evento</label><input name="title" required maxlength="90" placeholder="Ej. Feria de proyectos"><label>Fecha y hora</label><input name="detail" type="datetime-local" required><label>Lugar o modalidad</label><input name="contact" required maxlength="100" placeholder="Ej. Campus central / virtual"><label>Descripción</label><textarea name="description" required maxlength="500" placeholder="Detalles de la actividad"></textarea><button class="btn btn-gradient btn-block" type="submit">Publicar evento</button></form>`,market:`<form id="campus-entry-data-form" onsubmit="submitCampusEntry(event,'market')"><label>Nombre del artículo</label><input name="title" required maxlength="90" placeholder="Ej. Libro de cálculo"><label>Nombre de quien entrega</label><input name="studentName" required maxlength="90" value="${escapeCampusText(currentUser.fullName||currentUser.username)}"><label>Punto de intercambio</label><input name="meetingPoint" required maxlength="120" placeholder="Ej. Cafetería del campus"><label>Hora del intercambio</label><input name="meetingTime" type="time" required><label>Detalles del artículo / qué ofreces</label><textarea name="description" required maxlength="500" placeholder="Estado, precio o artículo que buscas a cambio"></textarea><label class="check-row"><input type="checkbox" name="confirm" required> Confirmo que los datos del intercambio son correctos.</label><button class="btn btn-gradient btn-block" type="submit">Publicar intercambio</button></form>`,study:`<form id="campus-entry-data-form" onsubmit="submitCampusEntry(event,'study')"><label>Materia o tema</label><input name="title" required maxlength="90" placeholder="Ej. Programación II"><label>Nombre del estudiante que organiza</label><input name="studentName" required maxlength="90" value="${escapeCampusText(currentUser.fullName||currentUser.username)}"><label>Horario disponible</label><input name="schedule" required maxlength="100" placeholder="Ej. Martes y jueves, 15:00"><label>Lugar o modalidad</label><input name="meetingPoint" required maxlength="120" placeholder="Ej. Biblioteca / virtual"><label>Descripción</label><textarea name="description" required maxlength="500" placeholder="Qué desean estudiar y qué compañeros buscan"></textarea><button class="btn btn-gradient btn-block" type="submit">Crear círculo</button></form>`};target.innerHTML=`<div class="entry-form-panel"><h3>${type==='event'?'Nuevo evento':type==='market'?'Nuevo intercambio':'Nuevo círculo de estudio'}</h3>${forms[type]}<button class="btn btn-sm btn-secondary-glass cancel-form" type="button" onclick="cancelCampusEntryForm()">Cancelar</button></div>`;target.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function cancelCampusEntryForm(){const target=document.getElementById('campus-entry-form');if(target)target.innerHTML=''}
+function submitCampusEntry(event,type){event.preventDefault();if(!currentUser){showWelcomeModal();return}const form=event.currentTarget;const data=Object.fromEntries(new FormData(form).entries());if(type==='market'&&!data.confirm)return;const key=type==='event'?'campusEvents':type==='market'?'campusMarket':'campusStudyGroups';const entry={id:Date.now(),title:data.title.trim(),description:data.description.trim(),author:currentUser.username,createdAt:Date.now()};if(type==='event'){entry.detail=data.detail;entry.contact=data.contact;entry.reactions={}}if(type==='market'){entry.studentName=data.studentName.trim();entry.meetingPoint=data.meetingPoint.trim();entry.meetingTime=data.meetingTime;entry.confirmed=true}if(type==='study'){entry.studentName=data.studentName.trim();entry.subject=data.title.trim();entry.schedule=data.schedule.trim();entry.meetingPoint=data.meetingPoint.trim();entry.responses={}}const all=readCampusData(key);all.push(entry);writeCampusData(key,all);openCampusFeature(type==='event'?'events':type==='market'?'market':'study');showToast('¡Publicado!','Tu publicación ya está disponible en la comunidad.')}
+function reactToCampusEvent(eventId,emoji){if(!currentUser){showWelcomeModal();return}const events=readCampusData('campusEvents');const item=events.find(x=>x.id===eventId);if(!item)return;item.reactions=item.reactions||{};item.reactions[emoji]=item.reactions[emoji]||[];const idx=item.reactions[emoji].indexOf(currentUser.username);if(idx>=0)item.reactions[emoji].splice(idx,1);else item.reactions[emoji].push(currentUser.username);writeCampusData('campusEvents',events);openCampusFeature('events')}
+function respondToStudyInvite(circleId,response){if(!currentUser){showWelcomeModal();return}const circles=readCampusData('campusStudyGroups');const circle=circles.find(x=>x.id===circleId);if(!circle||circle.author===currentUser.username)return;circle.responses=circle.responses||{};if(circle.responses[currentUser.username]){showToast('Respuesta registrada','Ya respondiste a esta invitación.');return}circle.responses[currentUser.username]=response;writeCampusData('campusStudyGroups',circles);userNotifications=JSON.parse(localStorage.getItem('userNotifications')||'[]');userNotifications.push({id:Date.now(),type:'study_response',targetUser:circle.author,fromUser:currentUser.username,studentName:currentUser.fullName||currentUser.username,circleTitle:circle.title,subject:circle.subject||circle.title,schedule:circle.schedule||circle.detail,meetingPoint:circle.meetingPoint||circle.contact,response,read:false,timestamp:Date.now()});localStorage.setItem('userNotifications',JSON.stringify(userNotifications));persistCampusCollection('userNotifications',userNotifications);openCampusFeature('study');showToast(response==='accepted'?'¡Invitación aceptada!':'Respuesta enviada',`Se notificó a @${circle.author} con tus datos de estudiante.`)}
+function renderFocusTimer(){return`<div class="focus-clock"><span class="feature-kicker">POMODORO</span><strong id="focus-clock-display">25:00</strong><p id="focus-clock-status">Listo para comenzar. Silencia las distracciones y concéntrate.</p><div class="feature-actions"><button class="btn btn-gradient" onclick="startFocusTimer()"><i class="fa-solid fa-play"></i> Comenzar</button><button class="btn btn-secondary-glass" onclick="pauseFocusTimer()"><i class="fa-solid fa-pause"></i> Pausar</button><button class="btn btn-secondary-glass" onclick="resetFocusTimer()"><i class="fa-solid fa-rotate-left"></i> Reiniciar</button></div></div>`}
+function updateFocusClock(){const el=document.getElementById('focus-clock-display');if(el)el.textContent=String(Math.floor(focusSeconds/60)).padStart(2,'0')+':'+String(focusSeconds%60).padStart(2,'0')}
+function startFocusTimer(){if(focusInterval)return;const status=document.getElementById('focus-clock-status');if(status)status.textContent='Sesión en marcha. ¡Tú puedes!';focusInterval=setInterval(()=>{focusSeconds=Math.max(0,focusSeconds-1);updateFocusClock();if(focusSeconds===0){pauseFocusTimer();if(status)status.textContent='¡Excelente trabajo! Terminaste tus 25 minutos. Tómate un descanso.';showToast('¡Sesión completada!','Terminaste un bloque de concentración.')}},1000)}
+function pauseFocusTimer(){if(focusInterval)clearInterval(focusInterval);focusInterval=null;const status=document.getElementById('focus-clock-status');if(status&&focusSeconds>0)status.textContent='Sesión pausada. Continúa cuando estés listo.'}
+function resetFocusTimer(){pauseFocusTimer();focusSeconds=25*60;updateFocusClock();const status=document.getElementById('focus-clock-status');if(status)status.textContent='Temporizador reiniciado. ¡Vamos de nuevo!'}
